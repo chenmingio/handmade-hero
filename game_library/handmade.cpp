@@ -10,25 +10,33 @@ struct game_offscreen_buffer {
 
 internal
 void GameUpdateAndRender(game_offscreen_buffer *Buffer, int offsetX, int offsetY) {
-    uint8 *Row = (uint8 *) Buffer->Memory;
+    uint8 *Row = (uint8 *)Buffer->Memory;
 
     for (int Y = 0; Y < Buffer->Height; ++Y) {
-        uint32 *Pixel = (uint32 *) Row;
 
-        for (int X = 0; X < Buffer->Width; ++X) {
+        uint8 *Pixel = (uint8 *)Row;
 
+        for(int X = 0; X < Buffer->Width; ++X) {
+
+            /*  Pixel in memory: RR GG BB AA */
+
+            //Red
             *Pixel = 0;
             ++Pixel;
 
-            *Pixel = (uint8) Y + (uint8) offsetY;
+            //Green
+            *Pixel = (uint8)Y+(uint8)offsetY;
             ++Pixel;
 
-            *Pixel = X + offsetX;
+            //Blue
+            *Pixel = (uint8)X+(uint8)offsetX;
             ++Pixel;
 
+            //Alpha
             *Pixel = 255;
             ++Pixel;
         }
+
         Row += Buffer->Pitch;
     }
 }
