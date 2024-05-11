@@ -6,10 +6,11 @@
 #include <mach/mach_time.h>
 #include <math.h>
 #include "osx_main.h"
+#include "../game_library/handmade.cpp"
 
 global_variable bool Running = true;
 
-void MacRefreshBuffer(mac_offscreen_buffer *Buffer, NSWindow *Window) {
+void MacRefreshBuffer(game_offscreen_buffer *Buffer, NSWindow *Window) {
 
     if (Buffer->Memory) {
         free(Buffer->Memory);
@@ -21,45 +22,9 @@ void MacRefreshBuffer(mac_offscreen_buffer *Buffer, NSWindow *Window) {
     Buffer->Memory = (uint8 *)malloc(Buffer->Pitch * Buffer->Height);
 }
 
-internal
-void RenderWeirdGradient(mac_offscreen_buffer *Buffer, 
-                         int OffsetX, int OffsetY) 
-{ 
-
-    uint8 *Row = (uint8 *)Buffer->Memory;
-
-    for (int Y = 0; Y < Buffer->Height; ++Y) {
-
-        uint8 *Pixel = (uint8 *)Row;
-
-        for(int X = 0; X < Buffer->Width; ++X) {
-            
-            /*  Pixel in memory: RR GG BB AA */
-
-            //Red            
-            *Pixel = 0; 
-            ++Pixel;  
-
-            //Green
-            *Pixel = (uint8)Y+(uint8)OffsetY;
-            ++Pixel;
-
-            //Blue
-            *Pixel = (uint8)X+(uint8)OffsetX;
-            ++Pixel;
-
-            //Alpha
-            *Pixel = 255;
-            ++Pixel;          
-        }
-
-        Row += Buffer->Pitch;
-    }
-
-}
 
 // TODO: (Ted)  Replace this with hardware rendering.
-void MacRedrawBuffer(mac_offscreen_buffer *Buffer, NSWindow *Window) {
+void MacRedrawBuffer(game_offscreen_buffer *Buffer, NSWindow *Window) {
     @autoreleasepool {
         NSBitmapImageRep *Rep = [[[NSBitmapImageRep alloc] initWithBitmapDataPlanes: &Buffer->Memory
                                   pixelsWide: Buffer->Width
@@ -479,7 +444,7 @@ int main(int argc, const char * argv[]) {
     [Window setDelegate: MainWindowDelegate];
     Window.contentView.wantsLayer = YES;
   
-    mac_offscreen_buffer Buffer = {};
+    game_offscreen_buffer Buffer = {};
     Buffer.BytesPerPixel = 4;
 
     MacRefreshBuffer(&Buffer, Window);
@@ -527,7 +492,7 @@ int main(int argc, const char * argv[]) {
             }
         } while (Event != nil);
 
-        RenderWeirdGradient(&Buffer, OffsetX, OffsetY);
+        GameUpdateAndRender(&Buffer, OffsetX, OffsetY);
         MacRedrawBuffer(&Buffer, Window); 
 
         local_persist uint32 Frequency = 256;

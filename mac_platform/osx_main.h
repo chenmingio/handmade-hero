@@ -1,7 +1,7 @@
 // Handmade Hero Mac OS Platform Layer
 // By Theodore William Bendixson 
 #import <AudioToolbox/AudioToolbox.h>
-#include "handmade_types.h"
+#include "../game_library/handmade.h"
 
 const uint16 LeftArrowKeyCode = 0x7B;
 const uint16 RightArrowKeyCode = 0x7C;
@@ -14,15 +14,6 @@ const uint16 FKeyCode = 0x03;
 const uint16 QKeyCode = 0x0C;
 const uint16 RKeyCode = 0x0F;
 const uint16 LKeyCode = 0x25;
-
-struct mac_offscreen_buffer
-{
-    uint8 *Memory;
-    uint32 Width;
-    uint32 Height;
-    uint32 BytesPerPixel;
-    uint32 Pitch;
-};
 
 struct mac_game_controller
 {

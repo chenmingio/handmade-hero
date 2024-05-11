@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXFileReference section */
+		4334E5042BEFA00600A97723 /* handmade.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = handmade.cpp; path = ../../game_library/handmade.cpp; sourceTree = "<group>"; };
 		433886F22BEF6DC600CE88BA /* osx_main.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = osx_main.mm; path = ../osx_main.mm; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -15,6 +16,7 @@
 			isa = PBXGroup;
 			children = (
 				433886F22BEF6DC600CE88BA /* osx_main.mm */,
+				4334E5042BEFA00600A97723 /* handmade.cpp */,
 			);
 			sourceTree = "<group>";
 		};
