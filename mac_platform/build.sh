@@ -12,7 +12,7 @@ MAC_PLATFORM_LAYER_PATH="../../code/mac_platform"
 INCLUDED_FRAMEWORKS="-framework AppKit -framework IOKit -framework AudioToolbox"
 
 #clang -g "$INCLUDED_FRAMEWORKS" -o $APP_NAME ${MAC_PLATFORM_LAYER_PATH}/osx_main.mm || exit
-clang -g -framework AppKit -framework IOKit -framework AudioToolbox -o $APP_NAME ${MAC_PLATFORM_LAYER_PATH}/osx_main.mm || exit
+clang -g  "-DHANDMADE_INTERNAL=0" -framework AppKit -framework IOKit -framework AudioToolbox -o $APP_NAME ${MAC_PLATFORM_LAYER_PATH}/osx_main.mm || exit
 
 rm -rf $APP_BUNDLE_NAME
 mkdir -p ${APP_BUNDLE_NAME}/Contents/Resources
