@@ -1,6 +1,15 @@
-#define KiloBytes(Value) ((Value) * 1024LL)
-#define MegaBytes(Value) (KiloBytes(Value) * 1024LL)
-#define GigaBytes(Value) (MegaBytes(Value) * 1024LL)
+#define Kilobytes(Value) ((Value) * 1024LL)
+#define Megabytes(Value) (Kilobytes(Value) * 1024LL)
+#define Gigabytes(Value) (Megabytes(Value) * 1024LL)
+
+#if HANDMADE_INTERNAL
+struct debug_read_file_result {
+    void *Contents;
+    uint32 ContentsSize;
+};
+
+debug_read_file_result DEBUGPlatformReadEntireFile(char *Filename);
+#endif
 
 struct game_offscreen_buffer {
     uint8 *Memory;
@@ -131,6 +140,8 @@ void GameUpdateAndRender(game_memory *Memory, game_input *input, game_offscreen_
 
     game_state *GameState = (game_state *) Memory->PermanentStorage;
     if (!Memory->IsInitialized) {
+        debug_read_file_result FileReadResult = DEBUGPlatformReadEntireFile("test_background.bmp");
+
         GameState->OffsetX = 0;
         GameState->OffsetY = 0;
         GameState->ToneHz = 440;

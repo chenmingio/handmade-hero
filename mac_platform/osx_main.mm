@@ -2,13 +2,111 @@
 #include <AppKit/AppKit.h>
 #import <IOKit/hid/IOHIDLib.h>
 #import <AudioToolbox/AudioToolbox.h>
+#include <mach/mach_init.h>
 #include <mach/mach_time.h>
+#include <mach-o/dyld.h>
 #include <math.h>
 #include "osx_main.h"
 #include "../game_library/handmade.cpp"
 
 
 global_variable bool Running = true;
+
+#define MAC_MAX_FILENAME_SIZE 4096
+
+struct mac_app_path
+{
+    char Filename[MAC_MAX_FILENAME_SIZE];
+    char *OnePastLastAppFileNameSlash;
+};
+
+// NOTE: (Ted)  Not sure how this performs when the app directory is a symbolic link
+internal void
+MacBuildAppFilePath(mac_app_path *Path)
+{
+    uint32 BufferSize = sizeof(Path->Filename);
+    if (_NSGetExecutablePath(Path->Filename, &BufferSize) == 0)
+    {
+        for (char *Scan = Path->Filename;
+             *Scan; Scan++)
+        {
+            if (*Scan == '/')
+            {
+                Path->OnePastLastAppFileNameSlash = Scan + 1;
+            }
+        }
+    }
+}
+
+// TODO: Destination bounds checking
+internal void
+CatStrings(size_t SourceACount, char *SourceA,
+           size_t SourceBCount, char *SourceB,
+           size_t DestCount, char *Dest)
+{
+
+    for(int Index = 0;
+        Index < SourceACount;
+        ++Index)
+    {
+        *Dest++ = *SourceA++;
+    }
+
+    for(int Index = 0;
+        Index < SourceBCount;
+        ++Index)
+    {
+        *Dest++ = *SourceB++;
+    }
+
+    *Dest++ = 0;
+}
+
+internal int
+StringLength(char *String)
+{
+    int Count = 0;
+    while(*String++)
+    {
+        ++Count;
+    }
+    return(Count);
+}
+
+internal void
+MacBuildAppPathFilename(mac_app_path *Path, char *Filename, int DestCount, char *Dest)
+{
+    size_t PathFileNameSize = (Path->OnePastLastAppFileNameSlash - Path->Filename);
+    CatStrings(PathFileNameSize, Path->Filename,
+               StringLength(Filename), Filename,
+               DestCount, Dest);
+}
+
+debug_read_file_result DEBUGPlatformReadEntireFile(char *Filename)
+{
+    debug_read_file_result Result = {};
+
+    mac_app_path Path = {};
+    MacBuildAppFilePath(&Path);
+
+    // NOTE: (Ted)  This is the file location in the bundle.
+    char BundleFilename[MAC_MAX_FILENAME_SIZE];
+    char LocalFilename[MAC_MAX_FILENAME_SIZE];
+    snprintf(LocalFilename, sizeof(LocalFilename), "Contents/Resources/%s", Filename);
+
+
+    // Contents/Resources/test_background.bmp
+    MacBuildAppPathFilename(&Path, LocalFilename,
+                            sizeof(BundleFilename), BundleFilename);
+
+    // TODO: (Ted)  Actually load the bitmap!!!
+
+    return (Result);
+}
+
+// TODO: (Ted)
+// 1. Free file memory
+// 2. Debug write file
 
 void MacRefreshBuffer(game_offscreen_buffer *Buffer, NSWindow *Window) {
 
@@ -215,10 +313,8 @@ MacSetupGameController(mac_game_controller *MacGameController)
 internal void
 MacHandleKeyboardEvent(mac_game_controller *GameController, NSEvent *Event)
 {
-    NSLog(@"Event Type: %lu", Event.type);
     switch (Event.type) {
         case NSEventTypeKeyDown:
-            NSLog(@"%hu is down", Event.keyCode);
             if (Event.keyCode == UpArrowKeyCode)
             {
                 GameController->DPadY = 1;
@@ -463,11 +559,11 @@ int main(int argc, const char * argv[]) {
 
     game_memory GameMemory = {};
 
-    GameMemory.PermanentStorageSize = MegaBytes(64);
-    GameMemory.TransientStorageSize = GigaBytes(4);
+    GameMemory.PermanentStorageSize = Megabytes(64);
+    GameMemory.TransientStorageSize = Gigabytes(4);
 
 #if HANDMADE_INTERNAL
-    char *BaseAddress = (char *)GigaBytes(4);
+    char *BaseAddress = (char *)Gigabytes(12);
     uint32 AllocationFlags = MAP_PRIVATE | MAP_ANON | MAP_FIXED;
 #else
     void *BaseAddress = 0;
