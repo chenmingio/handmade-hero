@@ -2,7 +2,6 @@
 #include <AppKit/AppKit.h>
 #import <IOKit/hid/IOHIDLib.h>
 #import <AudioToolbox/AudioToolbox.h>
-#include <mach/mach_init.h>
 #include <mach/mach_time.h>
 #include <math.h>
 #include "osx_main.h"
@@ -211,6 +210,7 @@ MacSetupGameController(mac_game_controller *MacGameController)
                                     kCFRunLoopDefaultMode);
 }
 
+// TODO: (Ted)  Test this again.
 internal void
 MacHandleKeyboardEvent(mac_game_controller *GameController, NSEvent *Event)
 {
@@ -416,6 +416,15 @@ MacSetupAudio(mac_sound_output *SoundOutput)
     AudioOutputUnitStart(*SoundOutput->AudioUnit);
 }
 
+internal
+void MacProcessGameControllerButton(game_button_state *OldState,
+                                    game_button_state *NewState,
+                                    bool32 NewIsDown)
+{
+    NewState->EndedDown = NewIsDown;
+    NewState->HalfTransitionCount += ((NewState->EndedDown == OldState->EndedDown) ? 0:1);
+}
+
 int main(int argc, const char * argv[]) {
 
     HandmadeMainWindowDelegate *MainWindowDelegate = [[HandmadeMainWindowDelegate alloc] init];
@@ -454,15 +463,24 @@ int main(int argc, const char * argv[]) {
 
     mac_game_controller KeyboardController = {};
 
-    int OffsetX = 0;
-    int OffsetY = 0;
-    real32 tSine = 0.0f;
+    mac_game_controller *MacControllers[2] = { &KeyboardController, &PlaystationController };
 
-    // NOTE: (ted)  This is where we decide what input to take.
-    mac_game_controller *GameController = &PlaystationController; 
+    game_input Input[2] = {};
+    game_input *NewInput = &Input[0];
+    game_input *OldInput = &Input[1];
 
     mac_sound_output SoundOutput = {};
     MacSetupAudio(&SoundOutput);
+
+    game_sound_output_buffer SoundBuffer = {};
+    int16 *Samples = (int16*)calloc(SoundOutput.SamplesPerSecond,
+                                    SoundOutput.BytesPerSample);
+
+    SoundBuffer.SamplesPerSecond = SoundOutput.SamplesPerSecond;
+    int32 LatencySampleCount = SoundOutput.SamplesPerSecond / 15;
+    int32 TargetQueueBytes = LatencySampleCount * SoundOutput.BytesPerSample;
+
+    local_persist uint32 RunningSampleIndex = 0;
 
     mach_timebase_info_data_t TimeBase;
     mach_timebase_info(&TimeBase);
@@ -492,17 +510,75 @@ int main(int argc, const char * argv[]) {
             }
         } while (Event != nil);
 
-        GameUpdateAndRender(&Buffer, OffsetX, OffsetY);
-        MacRedrawBuffer(&Buffer, Window); 
+        game_input *Temp = NewInput;
+        NewInput = OldInput;
+        OldInput = Temp;
 
-        local_persist uint32 Frequency = 256;
+        for (int MacControllerIndex = 0;
+             MacControllerIndex < 2;
+             MacControllerIndex++)
+        {
+            mac_game_controller *MacController = MacControllers[MacControllerIndex]; 
 
-        uint32 Period = SoundOutput.SamplesPerSecond/Frequency; 
-        local_persist uint32 RunningSampleIndex = 0;
-       
-        int32 LatencySampleCount = SoundOutput.SamplesPerSecond / 15;
-        int32 TargetQueueBytes = LatencySampleCount * SoundOutput.BytesPerSample;
-       
+            game_controller_input *OldController = &OldInput->Controllers[MacControllerIndex];
+            game_controller_input *NewController = &NewInput->Controllers[MacControllerIndex];
+
+            // NOTE: (Ted)   Update Game Controler Inputs
+            MacProcessGameControllerButton(&(OldController->A),
+                                           &(NewController->A),
+                                           MacController->CircleButtonState);
+
+            MacProcessGameControllerButton(&(OldController->B),
+                                           &(NewController->B),
+                                           MacController->XButtonState);
+
+            MacProcessGameControllerButton(&(OldController->X),
+                                           &(NewController->X),
+                                           MacController->TriangleButtonState);
+
+            MacProcessGameControllerButton(&(OldController->Y),
+                                           &(NewController->Y),
+                                           MacController->SquareButtonState);
+
+            MacProcessGameControllerButton(&(OldController->LeftShoulder),
+                                           &(NewController->LeftShoulder),
+                                           MacController->LeftShoulderButtonState);
+
+            MacProcessGameControllerButton(&(OldController->RightShoulder),
+                                           &(NewController->RightShoulder),
+                                           MacController->RightShoulderButtonState);
+
+            bool32 Right = MacController->DPadX > 0 ? true:false;
+            bool32 Left = MacController->DPadX < 0 ? true:false;
+            bool32 Up = MacController->DPadY > 0 ? true:false;
+            bool32 Down = MacController->DPadY < 0 ? true:false;
+
+            MacProcessGameControllerButton(&(OldController->Right),
+                                           &(NewController->Right),
+                                           Right);
+            MacProcessGameControllerButton(&(OldController->Left),
+                                           &(NewController->Left),
+                                           Left);
+            MacProcessGameControllerButton(&(OldController->Up),
+                                           &(NewController->Up),
+                                           Up);
+            MacProcessGameControllerButton(&(OldController->Down),
+                                           &(NewController->Down),
+                                           Down);
+
+            // TODO: (Ted)  Figure out if controller really is analog.
+            NewController->IsAnalog = true; 
+
+            NewController->StartX = OldController->EndX;
+            NewController->StartY = OldController->EndY;
+
+            NewController->EndX = (real32)(MacController->LeftThumbstickX - 127.5f)/127.5f;
+            NewController->EndY = (real32)(MacController->LeftThumbstickY - 127.5f)/127.5f;
+
+            NewController->MinX = NewController->MaxX = NewController->EndX;
+            NewController->MinY = NewController->MaxY = NewController->EndY;
+        }
+
         uint32 TargetCursor = ((SoundOutput.PlayCursor + TargetQueueBytes) % SoundOutput.BufferSize);
 
         int32 ByteToLock = (RunningSampleIndex*SoundOutput.BytesPerSample) % SoundOutput.BufferSize; 
@@ -520,6 +596,16 @@ int main(int argc, const char * argv[]) {
             BytesToWrite = TargetCursor - ByteToLock;
         }
 
+        // NOTE: (Ted)  This is where we can calculate the number of sound samples to write
+        //              to the game_sound_output_buffer
+        SoundBuffer.Samples = Samples;
+        SoundBuffer.SampleCount = (BytesToWrite/SoundOutput.BytesPerSample);
+
+        GameUpdateAndRender(NewInput, &Buffer, &SoundBuffer);
+
+        // TODO: (Ted)  Move this for vysnc
+        MacRedrawBuffer(&Buffer, Window); 
+
         void *Region1 = (uint8*)SoundOutput.Data + ByteToLock;
         uint32 Region1Size = BytesToWrite;
         
@@ -532,16 +618,12 @@ int main(int argc, const char * argv[]) {
 
         uint32 Region1SampleCount = Region1Size/SoundOutput.BytesPerSample;
         int16* SampleOut = (int16*)Region1;
-        real32 ToneVolume = 5000;
 
         for (int SampleIndex = 0;
              SampleIndex < Region1SampleCount;
              ++SampleIndex) {
-            real32 SineValue = sinf(tSine);
-            int16 SampleValue = (int16)(SineValue * ToneVolume);
-            *SampleOut++ = SampleValue;
-            *SampleOut++ = SampleValue;
-            tSine += 2.0f*M_PI/(real32)Period;
+            *SampleOut++ = *SoundBuffer.Samples++;
+            *SampleOut++ = *SoundBuffer.Samples++;
             RunningSampleIndex++;
         }
 
@@ -551,53 +633,10 @@ int main(int argc, const char * argv[]) {
         for (int SampleIndex = 0;
              SampleIndex < Region2SampleCount;
              ++SampleIndex) {
-            real32 SineValue = sinf(tSine);
-            int16 SampleValue = (int16)(SineValue * ToneVolume);
-            *SampleOut++ = SampleValue;
-            *SampleOut++ = SampleValue;
-            tSine += 2.0f*M_PI/(real32)Period;
+            *SampleOut++ = *SoundBuffer.Samples++;
+            *SampleOut++ = *SoundBuffer.Samples++;
             RunningSampleIndex++;
         }
-
-        if (GameController->DPadX == 1)
-        {
-            OffsetX++;
-        } else if (GameController->DPadX == -1)
-        {
-            OffsetX--;
-        }
-
-        if (GameController->LeftShoulderButtonState == true)
-        {
-            OffsetX--;
-        }
-
-        if (GameController->RightShoulderButtonState == true)
-        {
-            OffsetX++;
-        }
-
-        // Thumbsticks.
-
-        // 0 - Hard Left.
-        // 128 - Nothing. -- ????
-        // 255 - Hard Right.
-
-        // -1 Hard Left
-        // 0 The Middle
-        // 1 Hard Right.
-        real32 MappedStickX = (real32)(GameController->LeftThumbstickX - 127.5f)/127.5f;
-        Frequency = MappedStickX*256 + 257; 
-
-
-        if (GameController->DPadY == 1)
-        {
-            OffsetY++;
-        } else if (GameController->DPadY == -1)
-        {
-            OffsetY--;
-        }
-
 
         // NOTE: End of Frame
         uint64 EndOfFrameTime = mach_absolute_time();

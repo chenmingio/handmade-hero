@@ -1,5 +1,3 @@
-// Handmade Hero Mac OS Platform Layer
-// By Theodore William Bendixson 
 #import <AudioToolbox/AudioToolbox.h>
 #include "../game_library/handmade.h"
 
@@ -15,6 +13,7 @@ const uint16 QKeyCode = 0x0C;
 const uint16 RKeyCode = 0x0F;
 const uint16 LKeyCode = 0x25;
 
+// TODO: (Ted) Have a way to specify if controller is analog.
 struct mac_game_controller
 {
     uint32 SquareButtonUsageID;
