@@ -9,7 +9,6 @@
 #include "osx_main.h"
 #include "../game_library/handmade.cpp"
 
-
 global_variable bool Running = true;
 
 #define MAC_MAX_FILENAME_SIZE 4096
@@ -82,6 +81,7 @@ MacBuildAppPathFilename(mac_app_path *Path, char *Filename, int DestCount, char 
                DestCount, Dest);
 }
 
+#if HANDMADE_INTERNAL
 debug_read_file_result DEBUGPlatformReadEntireFile(char *Filename)
 {
     debug_read_file_result Result = {};
@@ -92,17 +92,102 @@ debug_read_file_result DEBUGPlatformReadEntireFile(char *Filename)
     // NOTE: (Ted)  This is the file location in the bundle.
     char BundleFilename[MAC_MAX_FILENAME_SIZE];
     char LocalFilename[MAC_MAX_FILENAME_SIZE];
-    snprintf(LocalFilename, sizeof(LocalFilename), "Contents/Resources/%s", Filename);
 
+    // TODO: (Ted)  Put all of this into our own string functions.
+    sprintf(LocalFilename, "Contents/Resources/%s", Filename);
 
     // Contents/Resources/test_background.bmp
     MacBuildAppPathFilename(&Path, LocalFilename,
                             sizeof(BundleFilename), BundleFilename);
 
     // TODO: (Ted)  Actually load the bitmap!!!
+    FILE *FileHandle = fopen(BundleFilename, "r+");
+
+    if (FileHandle != NULL)
+    {
+        fseek(FileHandle, 0, SEEK_END);
+        uint64 FileSize = ftell(FileHandle);
+
+        if (FileSize)
+        {
+        	rewind(FileHandle);
+            Result.Contents = malloc(FileSize);
+
+            if (Result.Contents)
+            {
+                uint64 BytesRead = fread(Result.Contents, 1, FileSize, FileHandle);
+                if (BytesRead == FileSize)
+                {
+                    // Successfully read the file.
+                    Result.ContentsSize = FileSize;
+
+                } else
+                {
+                    // TODO: Clean this up.
+                    DEBUGPlatformFreeFileMemory(Result.Contents);
+                    Result.ContentsSize = 0;
+                }
+            } else
+            {
+                // TODO: Log this.
+            }
+        } else
+        {
+            // TODO: Log this.
+        }
+    } else
+    {
+        // TODO: Log this.
+    }
 
     return (Result);
 }
+
+void DEBUGPlatformFreeFileMemory(void *Memory)
+{
+    if (Memory)
+    {
+        free(Memory);
+    }
+}
+
+bool32 DEBUGPlatformWriteEntireFile(char *Filename, uint64 FileSize,
+                                    void *Memory)
+{
+    bool32 Result = false;
+
+    // TODO: Ted    Consider cleaning this up / compressing it?
+    mac_app_path Path = {};
+    MacBuildAppFilePath(&Path);
+
+    char BundleFilename[MAC_MAX_FILENAME_SIZE];
+    char LocalFilename[MAC_MAX_FILENAME_SIZE];
+
+    sprintf(LocalFilename, "Contents/%s", Filename);
+
+    MacBuildAppPathFilename(&Path, LocalFilename,
+                            sizeof(BundleFilename), BundleFilename);
+
+    FILE *FileHandle = fopen(BundleFilename, "w");
+
+    if (FileHandle)
+    {
+        uint64 BytesWritten = fwrite(Memory, 1, FileSize, FileHandle);
+        if (BytesWritten == FileSize)
+        {
+            Result = true;
+        } else
+        {
+            // TODO: Log this.
+        }
+    } else
+    {
+        // TODO: Log this
+    }
+
+    return Result;
+}
+#endif
 
 // TODO: (Ted)
 // 1. Free file memory
@@ -783,7 +868,7 @@ int main(int argc, const char * argv[]) {
         real32 SecondsPerFrame = (real32)NanosecondsPerFrame * 1.0E-9;
         real32 FramesPerSecond = 1 / SecondsPerFrame;
 
-//        NSLog(@"Frames Per Second: %f", FramesPerSecond);
+        NSLog(@"Frames Per Second: %f", FramesPerSecond);
 
         LastCounter = mach_absolute_time();
     }

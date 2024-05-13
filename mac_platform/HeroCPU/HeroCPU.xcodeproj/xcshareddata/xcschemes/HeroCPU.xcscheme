@@ -26,7 +26,7 @@
       allowLocationSimulation = "YES">
       <PathRunnable
          runnableDebuggingMode = "0"
-         FilePath = "/Users/benjamin/CLionProjects/HeroOnCPU/build/mac_os/CPUHero">
+         FilePath = "/Users/benjamin/CLionProjects/HeroOnCPU/build/mac_os/CPUHero.app">
       </PathRunnable>
    </LaunchAction>
    <ProfileAction
