@@ -9,8 +9,8 @@ struct debug_read_file_result {
 };
 
 debug_read_file_result DEBUGPlatformReadEntireFile(char *Filename);
-
 void DEBUGPlatformFreeFileMemory(void *Memory);
+
 #endif
 
 struct game_offscreen_buffer {
