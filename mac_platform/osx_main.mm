@@ -11,8 +11,10 @@
 
 global_variable bool Running = true;
 
+// TODO: (Ted)  Move this to the header file.
 #define MAC_MAX_FILENAME_SIZE 4096
 
+// TODO: (Ted)  Move this to the header file.
 struct mac_app_path
 {
     char Filename[MAC_MAX_FILENAME_SIZE];
@@ -609,6 +611,15 @@ void MacProcessGameControllerButton(game_button_state *OldState,
     NewState->HalfTransitionCount += ((NewState->EndedDown == OldState->EndedDown) ? 0:1);
 }
 
+internal real32
+MacGetSecondsElapsed(mach_timebase_info_data_t *TimeBase,
+                     uint64 Start, uint64 End)
+{
+    uint64 Elapsed = End - Start;
+    real32 Result = (real32)(Elapsed * (TimeBase->numer / TimeBase->denom)) / 1000.0f / 1000.0f / 1000.0f;
+    return (Result);
+}
+
 int main(int argc, const char * argv[]) {
 
     HandmadeMainWindowDelegate *MainWindowDelegate = [[HandmadeMainWindowDelegate alloc] init];
@@ -701,6 +712,11 @@ int main(int argc, const char * argv[]) {
     int32 TargetQueueBytes = LatencySampleCount * SoundOutput.BytesPerSample;
 
     local_persist uint32 RunningSampleIndex = 0;
+
+    // TODO: Determine this programmatically.
+    int32 MonitorRefreshHz = 60;
+    real32 TargetFramesPerSecond = MonitorRefreshHz / 2.0f;
+    real32 TargetSecondsPerFrame = 1.0f / TargetFramesPerSecond;
 
     mach_timebase_info_data_t TimeBase;
     mach_timebase_info(&TimeBase);
@@ -823,9 +839,6 @@ int main(int argc, const char * argv[]) {
 
         GameUpdateAndRender(&GameMemory, NewInput, &Buffer, &SoundBuffer);
 
-        // TODO: (Ted)  Move this for vysnc
-        MacRedrawBuffer(&Buffer, Window);
-
         void *Region1 = (uint8*)SoundOutput.Data + ByteToLock;
         uint32 Region1Size = BytesToWrite;
 
@@ -858,7 +871,38 @@ int main(int argc, const char * argv[]) {
             RunningSampleIndex++;
         }
 
-        // NOTE: End of Frame
+        uint64 WorkCounter = mach_absolute_time();
+
+        real32 WorkSeconds = MacGetSecondsElapsed(&TimeBase, LastCounter,
+                                                  WorkCounter);
+
+        real32 SecondsElapsedForFrame = WorkSeconds;
+
+        if (SecondsElapsedForFrame < TargetSecondsPerFrame)
+        {
+            // NOTE: We need to sleep up to the target framerate
+
+            real32 UnderOffset = 3.0f / 1000.0f;
+            real32 SleepTime = TargetSecondsPerFrame - SecondsElapsedForFrame - UnderOffset;
+            useconds_t SleepMS = (useconds_t)(1000.0f * 1000.0f * SleepTime);
+
+            if (SleepMS > 0)
+            {
+                usleep(SleepMS);
+            }
+
+            while (SecondsElapsedForFrame < TargetSecondsPerFrame)
+            {
+                SecondsElapsedForFrame = MacGetSecondsElapsed(&TimeBase, LastCounter,
+                                                              mach_absolute_time());
+            }
+
+        } else
+        {
+            // TODO: Log MISSED FRAME RATE!!!
+        }
+
+        // NOTE: End of Updates
         uint64 EndOfFrameTime = mach_absolute_time();
 
         uint64 TimeUnitsPerFrame = EndOfFrameTime - LastCounter;
@@ -866,11 +910,15 @@ int main(int argc, const char * argv[]) {
         // Here is where you print stuff..
         uint64 NanosecondsPerFrame = TimeUnitsPerFrame * (TimeBase.numer / TimeBase.denom);
         real32 SecondsPerFrame = (real32)NanosecondsPerFrame * 1.0E-9;
+        real32 MillesSecondsPerFrame = (real32)NanosecondsPerFrame * 1.0E-6;
         real32 FramesPerSecond = 1 / SecondsPerFrame;
 
         NSLog(@"Frames Per Second: %f", FramesPerSecond);
+        NSLog(@"MillesSecondsPerFrame: %f", MillesSecondsPerFrame);
 
         LastCounter = mach_absolute_time();
+
+        MacRedrawBuffer(&Buffer, Window);
     }
 
     printf("Handmade Finished Running");
