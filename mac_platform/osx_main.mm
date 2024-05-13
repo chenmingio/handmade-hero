@@ -557,6 +557,38 @@ MacSetupAudio(mac_sound_output *SoundOutput)
         return;
     }
 
+    // TODO: (Ted) Make this dependent of the frame rate.
+    uint32 TargetSoundFrameSize = 1024;
+
+    Status = AudioUnitSetProperty(*SoundOutput->AudioUnit,
+                                  kAudioDevicePropertyBufferFrameSize,
+                                  kAudioUnitScope_Global,
+                                  0,
+                                  &TargetSoundFrameSize, sizeof(uint32));
+
+    //todo: (ted) - Better error handling
+    if (Status != noErr) {
+        NSLog(@"There was an error setting the sound frame size");
+        return;
+    }
+
+    uint32 DataSize = sizeof(uint32);
+    uint32 CurrentBufferFrameSize = 0;
+
+    Status = AudioUnitGetProperty(*SoundOutput->AudioUnit,
+                                  kAudioDevicePropertyBufferFrameSize,
+                                  kAudioUnitScope_Global,
+                                  0,
+                                  &CurrentBufferFrameSize, &DataSize);
+
+    //todo: (ted) - Better error handling
+    if (Status != noErr) {
+        NSLog(@"There was an error getting the current buffer frame size");
+        return;
+    }
+
+    NSLog(@"Current Sound Buffer Frame Size: %u", CurrentBufferFrameSize);
+
     AudioStreamBasicDescription AudioDescriptor;
     AudioDescriptor.mSampleRate = SoundOutput->SamplesPerSecond;
     AudioDescriptor.mFormatID = kAudioFormatLinearPCM;
