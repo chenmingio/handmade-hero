@@ -43,8 +43,8 @@ struct mac_game_controller
 
 struct mac_sound_output
 {
-    int32 SamplesPerSecond;
-    int32 BytesPerSample;
+    uint32 SamplesPerSecond;
+    uint32 BytesPerSample;
     uint32 BufferSize;
     //
     // NOTE: (ted)  This isn't the real sound card play cursor.

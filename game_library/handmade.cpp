@@ -22,9 +22,9 @@ struct game_offscreen_buffer {
 };
 
 struct game_sound_output_buffer {
-    int SamplesPerSecond;
-    int SampleCount;
     int16 *Samples;
+    uint32 SampleCount;
+    uint32 SamplesPerSecond;
 };
 
 internal
@@ -36,12 +36,12 @@ void GameUpdateSound(game_sound_output_buffer *SoundBuffer, uint32 ToneHz) {
 
     int16 *SampleOut = SoundBuffer->Samples;
 
-    for (int SampleIndex = 0; SampleIndex < SoundBuffer->SampleCount; ++SampleIndex) {
+    for (uint32 SampleIndex = 0; SampleIndex < SoundBuffer->SampleCount; ++SampleIndex) {
         real32 SineValue = sinf(tSine);
         int16 SampleValue = (int16) (SineValue * ToneVolume);
         *SampleOut++ = SampleValue;
         *SampleOut++ = SampleValue;
-        tSine += 2.0f + M_PI / (real32) WavePeriod;
+        tSine += 2.0f + (real32) M_PI / (real32) WavePeriod;
     }
 }
 
@@ -49,11 +49,11 @@ internal
 void RenderWeirdGradient(game_offscreen_buffer *Buffer, int OffsetX, int OffsetY) {
     uint8 *Row = (uint8 *) Buffer->Memory;
 
-    for (int Y = 0; Y < Buffer->Height; ++Y) {
+    for (uint32 Y = 0; Y < Buffer->Height; ++Y) {
 
         uint8 *Pixel = (uint8 *) Row;
 
-        for (int X = 0; X < Buffer->Width; ++X) {
+        for (uint32 X = 0; X < Buffer->Width; ++X) {
 
             /*  Pixel in memory: RR GG BB AA */
             //Red
@@ -142,7 +142,7 @@ void GameUpdateAndRender(game_memory *Memory, game_input *input, game_offscreen_
 
     game_state *GameState = (game_state *) Memory->PermanentStorage;
     if (!Memory->IsInitialized) {
-        debug_read_file_result FileReadResult = DEBUGPlatformReadEntireFile("test_background.bmp");
+        debug_read_file_result FileReadResult = DEBUGPlatformReadEntireFile(const_cast<char*>("test_background.bmp"));
 
         GameState->OffsetX = 0;
         GameState->OffsetY = 0;
@@ -154,7 +154,7 @@ void GameUpdateAndRender(game_memory *Memory, game_input *input, game_offscreen_
     game_controller_input *Input1 = &input->Controllers[0];
 
     if (Input1->IsAnalog) {
-        GameState->ToneHz = (Input1->EndX) * 256 + 256;
+        GameState->ToneHz = (uint32)(Input1->EndX) * 256 + 256;
     }
 
     if (Input1->A.EndedDown) {

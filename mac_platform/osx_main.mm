@@ -46,14 +46,14 @@ CatStrings(size_t SourceACount, char *SourceA,
            size_t DestCount, char *Dest)
 {
 
-    for(int Index = 0;
+    for(uint32 Index = 0;
         Index < SourceACount;
         ++Index)
     {
         *Dest++ = *SourceA++;
     }
 
-    for(int Index = 0;
+    for(uint32 Index = 0;
         Index < SourceBCount;
         ++Index)
     {
@@ -63,10 +63,10 @@ CatStrings(size_t SourceACount, char *SourceA,
     *Dest++ = 0;
 }
 
-internal int
+internal uint32
 StringLength(char *String)
 {
-    int Count = 0;
+    uint32 Count = 0;
     while(*String++)
     {
         ++Count;
@@ -75,9 +75,9 @@ StringLength(char *String)
 }
 
 internal void
-MacBuildAppPathFilename(mac_app_path *Path, char *Filename, int DestCount, char *Dest)
+MacBuildAppPathFilename(mac_app_path *Path, char *Filename, uint32 DestCount, char *Dest)
 {
-    size_t PathFileNameSize = (Path->OnePastLastAppFileNameSlash - Path->Filename);
+    size_t PathFileNameSize = (size_t)(Path->OnePastLastAppFileNameSlash - Path->Filename);
     CatStrings(PathFileNameSize, Path->Filename,
                StringLength(Filename), Filename,
                DestCount, Dest);
@@ -108,7 +108,7 @@ debug_read_file_result DEBUGPlatformReadEntireFile(char *Filename)
     if (FileHandle != NULL)
     {
         fseek(FileHandle, 0, SEEK_END);
-        uint64 FileSize = ftell(FileHandle);
+        uint64 FileSize = (uint64)ftell(FileHandle);
 
         if (FileSize)
         {
@@ -121,7 +121,7 @@ debug_read_file_result DEBUGPlatformReadEntireFile(char *Filename)
                 if (BytesRead == FileSize)
                 {
                     // Successfully read the file.
-                    Result.ContentsSize = FileSize;
+                    Result.ContentsSize = (uint32)FileSize;
 
                 } else
                 {
@@ -201,8 +201,8 @@ void MacRefreshBuffer(game_offscreen_buffer *Buffer, NSWindow *Window) {
         free(Buffer->Memory);
     }
 
-    Buffer->Width = Window.contentView.bounds.size.width;
-    Buffer->Height = Window.contentView.bounds.size.height;
+    Buffer->Width = (uint32)Window.contentView.bounds.size.width;
+    Buffer->Height = (uint32)Window.contentView.bounds.size.height;
     Buffer->Pitch = Buffer->Width * Buffer->BytesPerPixel;
     Buffer->Memory = (uint8 *)malloc(Buffer->Pitch * Buffer->Height);
 }
@@ -529,8 +529,8 @@ internal void
 MacSetupAudio(mac_sound_output *SoundOutput)
 {
     SoundOutput->SamplesPerSecond = 48000;
-    int32 AudioFrameSize = sizeof(int16) * 2;
-    int32 NumberOfSeconds = 2;
+    uint32 AudioFrameSize = sizeof(int16) * 2;
+    uint32 NumberOfSeconds = 2;
     SoundOutput->BytesPerSample = AudioFrameSize;
 
     // NOTE: (ted)  Allocate a two second sound buffer
@@ -629,10 +629,9 @@ int main(int argc, const char * argv[]) {
     real32 GlobalRenderWidth = 1024;
     real32 GlobalRenderHeight = 768;
 
-    NSRect InitialFrame = NSMakeRect((ScreenRect.size.width - GlobalRenderWidth) * 0.5,
-                                     (ScreenRect.size.height - GlobalRenderHeight) * 0.5,
-                                     GlobalRenderWidth,
-                                     GlobalRenderHeight);
+    NSRect InitialFrame = NSMakeRect((ScreenRect.size.width - (real64)GlobalRenderWidth) * 0.5,
+                                     (ScreenRect.size.height - (real64)GlobalRenderHeight) * 0.5,
+                                     (real64)GlobalRenderWidth, (real64)GlobalRenderHeight);
 
     NSWindow *Window = [[KeyIgnoringWindow alloc]
             initWithContentRect: InitialFrame
@@ -660,13 +659,13 @@ int main(int argc, const char * argv[]) {
 
 #if HANDMADE_INTERNAL
     char *BaseAddress = (char *)Gigabytes(12);
-    uint32 AllocationFlags = MAP_PRIVATE | MAP_ANON | MAP_FIXED;
+    int32 AllocationFlags = MAP_PRIVATE | MAP_ANON | MAP_FIXED;
 #else
     void *BaseAddress = 0;
-    uint32 AllocationFlags = MAP_PRIVATE | MAP_ANON;
+    int32 AllocationFlags = MAP_PRIVATE | MAP_ANON;
 #endif
 
-    uint32 AccessFlags = PROT_READ | PROT_WRITE;
+    int32 AccessFlags = PROT_READ | PROT_WRITE;
 
     uint64 TotalSize = GameMemory.PermanentStorageSize + GameMemory.TransientStorageSize;
 
@@ -708,8 +707,8 @@ int main(int argc, const char * argv[]) {
                                     SoundOutput.BytesPerSample);
 
     SoundBuffer.SamplesPerSecond = SoundOutput.SamplesPerSecond;
-    int32 LatencySampleCount = SoundOutput.SamplesPerSecond / 15;
-    int32 TargetQueueBytes = LatencySampleCount * SoundOutput.BytesPerSample;
+    uint32 LatencySampleCount = SoundOutput.SamplesPerSecond / 15;
+    uint32 TargetQueueBytes = LatencySampleCount * SoundOutput.BytesPerSample;
 
     local_persist uint32 RunningSampleIndex = 0;
 
@@ -817,8 +816,8 @@ int main(int argc, const char * argv[]) {
 
         uint32 TargetCursor = ((SoundOutput.PlayCursor + TargetQueueBytes) % SoundOutput.BufferSize);
 
-        int32 ByteToLock = (RunningSampleIndex*SoundOutput.BytesPerSample) % SoundOutput.BufferSize;
-        int32 BytesToWrite;
+        uint32 ByteToLock = (RunningSampleIndex*SoundOutput.BytesPerSample) % SoundOutput.BufferSize;
+        uint32 BytesToWrite;
 
         if (ByteToLock > TargetCursor) {
             // NOTE: (ted)  Play Cursor wrapped.
@@ -852,7 +851,7 @@ int main(int argc, const char * argv[]) {
         uint32 Region1SampleCount = Region1Size/SoundOutput.BytesPerSample;
         int16* SampleOut = (int16*)Region1;
 
-        for (int SampleIndex = 0;
+        for (uint32 SampleIndex = 0;
              SampleIndex < Region1SampleCount;
              ++SampleIndex) {
             *SampleOut++ = *SoundBuffer.Samples++;
@@ -863,7 +862,7 @@ int main(int argc, const char * argv[]) {
         uint32 Region2SampleCount = Region2Size/SoundOutput.BytesPerSample;
         SampleOut = (int16*)Region2;
 
-        for (int SampleIndex = 0;
+        for (uint32 SampleIndex = 0;
              SampleIndex < Region2SampleCount;
              ++SampleIndex) {
             *SampleOut++ = *SoundBuffer.Samples++;
@@ -909,12 +908,12 @@ int main(int argc, const char * argv[]) {
 
         // Here is where you print stuff..
         uint64 NanosecondsPerFrame = TimeUnitsPerFrame * (TimeBase.numer / TimeBase.denom);
-        real32 SecondsPerFrame = (real32)NanosecondsPerFrame * 1.0E-9;
-        real32 MillesSecondsPerFrame = (real32)NanosecondsPerFrame * 1.0E-6;
+        real32 SecondsPerFrame = (real32)NanosecondsPerFrame * (real32)1.0E-9;
+        real32 MillesSecondsPerFrame = (real32)NanosecondsPerFrame * (real32)1.0E-6;
         real32 FramesPerSecond = 1 / SecondsPerFrame;
 
-        NSLog(@"Frames Per Second: %f", FramesPerSecond);
-        NSLog(@"MillesSecondsPerFrame: %f", MillesSecondsPerFrame);
+        NSLog(@"Frames Per Second: %f", (real64)FramesPerSecond);
+        NSLog(@"MillesSecondsPerFrame: %f", (real64)MillesSecondsPerFrame);
 
         LastCounter = mach_absolute_time();
 
