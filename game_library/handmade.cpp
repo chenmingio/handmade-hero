@@ -80,7 +80,7 @@ void GameUpdateAndRender(game_memory *Memory, game_input *input, game_offscreen_
     game_controller_input *Input1 = &input->Controllers[0];
 
     if (Input1->IsAnalog) {
-        GameState->ToneHz = (uint32) (Input1->EndX) * 256 + 256;
+        GameState->ToneHz = 1;
     }
 
     if (Input1->A.EndedDown) {

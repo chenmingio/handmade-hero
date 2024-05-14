@@ -1,4 +1,4 @@
-#include <stdio.h>
+// Handmade Hero OS#include <stdio.h>
 #include <AppKit/AppKit.h>
 #import <IOKit/hid/IOHIDLib.h>
 #import <AudioToolbox/AudioToolbox.h>
@@ -8,6 +8,7 @@
 #include <mach-o/dyld.h>
 #include <math.h>
 #include "osx_main.h"
+#include <sys/stat.h>
 
 global_variable bool Running = true;
 
@@ -651,10 +652,25 @@ MacGetSecondsElapsed(mach_timebase_info_data_t *TimeBase,
     return (Result);
 }
 
+inline time_t
+MacGetLastWriteTime(char *Filename)
+{
+    time_t Result = 0;
+
+    struct stat StatData = {};
+
+    if (stat(Filename, &StatData) == 0)
+    {
+        Result = StatData.st_mtime;
+    }
+
+    return (Result);
+}
+
 internal
 void MacLoadGameCode(mac_game_code *Game, char *GameLibraryFullPath)
 {
-    printf("Loading Game lib from %s\n", GameLibraryFullPath);
+    Game->DLLLastWriteTime = MacGetLastWriteTime(GameLibraryFullPath);
     Game->GameCodeDLL = dlopen(GameLibraryFullPath, RTLD_NOW);
     if (Game->GameCodeDLL)
     {
@@ -674,6 +690,20 @@ void MacLoadGameCode(mac_game_code *Game, char *GameLibraryFullPath)
         Game->UpdateAndRender = 0;
         Game->GetSoundSamples = 0;
     }
+}
+
+internal
+void MacUnloadGameCode(mac_game_code *Game)
+{
+    if(Game->GameCodeDLL)
+    {
+        dlclose(Game->GameCodeDLL);
+        Game->GameCodeDLL = 0;
+    }
+
+    Game->IsValid = false;
+    Game->UpdateAndRender = 0;
+    Game->GetSoundSamples = 0;
 }
 
 int main(int argc, const char * argv[]) {
@@ -709,11 +739,9 @@ int main(int argc, const char * argv[]) {
     MacRefreshBuffer(&Buffer, Window);
 
     game_memory GameMemory = {};
-#if HANDMADE_INTERNAL
     GameMemory.DEBUGPlatformReadEntireFile = DEBUGPlatformReadEntireFile;
     GameMemory.DEBUGPlatformFreeFileMemory = DEBUGPlatformFreeFileMemory;
     GameMemory.DEBUGPlatformWriteEntireFile = DEBUGPlatformWriteEntireFile;
-#endif
 
     GameMemory.PermanentStorageSize = Megabytes(64);
     GameMemory.TransientStorageSize = Gigabytes(4);
@@ -730,9 +758,6 @@ int main(int argc, const char * argv[]) {
 
     uint64 TotalSize = GameMemory.PermanentStorageSize + GameMemory.TransientStorageSize;
 
-    NSLog(@"Base Address: %p", BaseAddress);
-    NSLog(@"Permanent Storage Size: %llu mb", GameMemory.PermanentStorageSize / 1024 / 1024);
-    NSLog(@"Transient Storage Size: %llu gb", GameMemory.TransientStorageSize / 1024 / 1024 / 1024);
     GameMemory.PermanentStorage = mmap(BaseAddress, GameMemory.PermanentStorageSize, AccessFlags,
                                        AllocationFlags, -1, 0);
 
@@ -752,7 +777,6 @@ int main(int argc, const char * argv[]) {
                     format: @"Failed to allocate transient storage"];
     }
 
-    NSLog(@"Game Memory allocation done.");
     mac_game_controller PlaystationController = {};
     MacSetupGameController(&PlaystationController);
 
@@ -913,6 +937,15 @@ int main(int argc, const char * argv[]) {
         SoundBuffer.Samples = Samples;
         SoundBuffer.SampleCount = (BytesToWrite/SoundOutput.BytesPerSample);
 
+        time_t NewGameLibraryWriteTime = MacGetLastWriteTime(GameLibraryFullPath);
+
+        if (Game.DLLLastWriteTime < NewGameLibraryWriteTime)
+        {
+            NSLog(@"Reloading Game Code");
+            MacUnloadGameCode(&Game);
+            MacLoadGameCode(&Game, GameLibraryFullPath);
+        }
+
         Game.UpdateAndRender(&GameMemory, NewInput, &Buffer);
         Game.GetSoundSamples(&GameMemory, &SoundBuffer);
 
@@ -990,8 +1023,8 @@ int main(int argc, const char * argv[]) {
         real32 MillesSecondsPerFrame = (real32)NanosecondsPerFrame * (real32)1.0E-6;
         real32 FramesPerSecond = 1 / SecondsPerFrame;
 
-        NSLog(@"Frames Per Second: %f", (real64)FramesPerSecond);
-        NSLog(@"MillesSecondsPerFrame: %f", (real64)MillesSecondsPerFrame);
+//        NSLog(@"Frames Per Second: %f", (real64)FramesPerSecond);
+//        NSLog(@"MillesSecondsPerFrame: %f", (real64)MillesSecondsPerFrame);
 
         LastCounter = mach_absolute_time();
 

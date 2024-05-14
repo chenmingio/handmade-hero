@@ -58,6 +58,7 @@ struct mac_sound_output
 struct mac_game_code
 {
     void *GameCodeDLL;
+    time_t DLLLastWriteTime;
     game_update_and_render *UpdateAndRender;
     game_get_sound_samples *GetSoundSamples;
     bool32 IsValid;
