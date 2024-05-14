@@ -23,6 +23,7 @@ DISABLED_WARNINGS="-Wno-old-style-cast
                    -Wno-nested-anon-types
                    -Wno-padded
                    -Wno-unused-variable
+                   -Wno-pedantic
                    -Wno-unused-parameter
                    -Wno-missing-prototypes
                    -Wno-nullable-to-nonnull-conversion
@@ -35,9 +36,13 @@ INCLUDED_FRAMEWORKS="-framework AppKit
                      -framework IOKit
                      -framework AudioToolbox"
 
-#clang -g ${COMPILER_WARNING_FLAGS} ${DISABLED_WARNINGS} "-DHANDMADE_INTERNAL=1" -framework AppKit -framework IOKit -framework AudioToolbox -o $APP_NAME ${MAC_PLATFORM_LAYER_PATH}/osx_main.mm || exit
-clang -g ${COMPILER_WARNING_FLAGS} ${DISABLED_WARNINGS} "-DHANDMADE_INTERNAL=1" ${INCLUDED_FRAMEWORKS} -o $APP_NAME ${MAC_PLATFORM_LAYER_PATH}/osx_main.mm || exit
-#clang -g "-DHANDMADE_INTERNAL=1" ${INCLUDED_FRAMEWORKS} -o $APP_NAME ${MAC_PLATFORM_LAYER_PATH}/osx_main.mm || exit
+COMMON_COMPILER_FLAGS="${COMPILER_WARNING_FLAGS}
+                       ${DISABLED_WARNINGS}
+                       -DHANDMADE_INTERNAL=1
+                       ${INCLUDED_FRAMEWORKS}"
+
+clang -fsanitize=address -g -o GameCode.dylib ${COMMON_COMPILER_FLAGS} -dynamiclib ../../code/game_library/handmade.cpp || exit
+clang -fsanitize=address -g ${COMMON_COMPILER_FLAGS} -o $APP_NAME ${MAC_PLATFORM_LAYER_PATH}/osx_main.mm || exit
 
 rm -rf $APP_BUNDLE_NAME
 mkdir -p ${BUNDLE_RESOURCE_PATH}
@@ -47,6 +52,8 @@ cp $APP_NAME ${APP_BUNDLE_NAME}/${APP_NAME}
 # copy info.plist from code resources to .app folder
 cp ${RESOURCE_PATH}/Info.plist ${APP_BUNDLE_NAME}/Info.plist
 cp ${RESOURCE_PATH}/test_background.bmp ${BUNDLE_RESOURCE_PATH}
+cp GameCode.dylib ${BUNDLE_RESOURCE_PATH}/GameCode.dylib
+cp -r GameCode.dylib.dSYM ${BUNDLE_RESOURCE_PATH}/GameCode.dylib.dSYM
 
 popd || exit
 

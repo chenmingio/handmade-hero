@@ -1,31 +1,5 @@
-#define Kilobytes(Value) ((Value) * 1024LL)
-#define Megabytes(Value) (Kilobytes(Value) * 1024LL)
-#define Gigabytes(Value) (Megabytes(Value) * 1024LL)
-
-#if HANDMADE_INTERNAL
-struct debug_read_file_result {
-    void *Contents;
-    uint32 ContentsSize;
-};
-
-debug_read_file_result DEBUGPlatformReadEntireFile(char *Filename);
-void DEBUGPlatformFreeFileMemory(void *Memory);
-
-#endif
-
-struct game_offscreen_buffer {
-    uint8 *Memory;
-    uint32 Height;
-    uint32 Width;
-    uint32 BytesPerPixel;
-    uint32 Pitch;
-};
-
-struct game_sound_output_buffer {
-    int16 *Samples;
-    uint32 SampleCount;
-    uint32 SamplesPerSecond;
-};
+#include "handmade_types.h"
+#include "handmade.h"
 
 internal
 void GameUpdateSound(game_sound_output_buffer *SoundBuffer, uint32 ToneHz) {
@@ -77,72 +51,24 @@ void RenderWeirdGradient(game_offscreen_buffer *Buffer, int OffsetX, int OffsetY
     }
 }
 
-struct game_button_state {
-    int HalfTransitionCount;
-    bool32 EndedDown;
-};
+extern "C" {
+void GameGetSoundSamples(game_memory *Memory, game_sound_output_buffer *SoundBuffer) {
+    game_state *GameState = (game_state *) Memory->PermanentStorage;
+    GameUpdateSound(SoundBuffer, GameState->ToneHz);
+}
 
-struct game_controller_input {
-    bool32 IsAnalog;
-    real32 StartX;
-    real32 StartY;
-
-    real32 MinX;
-    real32 MinY;
-
-    real32 MaxX;
-    real32 MaxY;
-
-    real32 EndX;
-    real32 EndY;
-
-    union {
-        game_button_state Buttons[10];
-        struct {
-            game_button_state Up;
-            game_button_state Down;
-            game_button_state Left;
-            game_button_state Right;
-
-            game_button_state A;
-            game_button_state B;
-            game_button_state X;
-            game_button_state Y;
-
-            game_button_state LeftShoulder;
-            game_button_state RightShoulder;
-        };
-    };
-};
-
-struct game_input {
-    game_controller_input Controllers[2];
-};
-
-
-struct game_memory {
-    uint64 PermanentStorageSize;
-    void *PermanentStorage;
-
-    uint64 TransientStorageSize;
-    void *TransientStorage;
-
-    bool32 IsInitialized;
-};
-
-struct game_state {
-    int OffsetX;
-    int OffsetY;
-    uint32 ToneHz;
-};
-
-internal
-void GameUpdateAndRender(game_memory *Memory, game_input *input, game_offscreen_buffer *Buffer,
-                         game_sound_output_buffer *SoundBuffer) {
+void GameUpdateAndRender(game_memory *Memory, game_input *input, game_offscreen_buffer *Buffer) {
 
     game_state *GameState = (game_state *) Memory->PermanentStorage;
     if (!Memory->IsInitialized) {
-        debug_read_file_result FileReadResult = DEBUGPlatformReadEntireFile(const_cast<char*>("test_background.bmp"));
+
+#if HANDMADE_INTERNAL
+        debug_read_file_result FileRead = Memory->DEBUGPlatformReadEntireFile(const_cast<char*>("test_background.bmp"));
+        if (FileRead.Contents) {
+            Memory->DEBUGPlatformWriteEntireFile(const_cast<char*>("test_background_copy.bmp"), FileRead.ContentsSize, FileRead.Contents);
+            Memory->DEBUGPlatformFreeFileMemory(FileRead.Contents);
+        }
+#endif
 
         GameState->OffsetX = 0;
         GameState->OffsetY = 0;
@@ -154,7 +80,7 @@ void GameUpdateAndRender(game_memory *Memory, game_input *input, game_offscreen_
     game_controller_input *Input1 = &input->Controllers[0];
 
     if (Input1->IsAnalog) {
-        GameState->ToneHz = (uint32)(Input1->EndX) * 256 + 256;
+        GameState->ToneHz = (uint32) (Input1->EndX) * 256 + 256;
     }
 
     if (Input1->A.EndedDown) {
@@ -171,8 +97,7 @@ void GameUpdateAndRender(game_memory *Memory, game_input *input, game_offscreen_
     }
 
     RenderWeirdGradient(Buffer, GameState->OffsetX, GameState->OffsetY);
-    GameUpdateSound(SoundBuffer, GameState->ToneHz);
 }
-
+}
 
 
