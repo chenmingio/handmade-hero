@@ -15,7 +15,7 @@ void GameUpdateSound(game_sound_output_buffer *SoundBuffer, uint32 ToneHz) {
         int16 SampleValue = (int16) (SineValue * ToneVolume);
         *SampleOut++ = SampleValue;
         *SampleOut++ = SampleValue;
-        tSine += 2.0f + (real32) M_PI / (real32) WavePeriod;
+        tSine += 2.0f * (real32) M_PI / (real32) WavePeriod;
     }
 }
 
@@ -80,7 +80,7 @@ void GameUpdateAndRender(game_memory *Memory, game_input *input, game_offscreen_
     game_controller_input *Input1 = &input->Controllers[0];
 
     if (Input1->IsAnalog) {
-        GameState->ToneHz = 1;
+        GameState->ToneHz = (uint32) (Input1->EndX) * 256 + 256;
     }
 
     if (Input1->A.EndedDown) {

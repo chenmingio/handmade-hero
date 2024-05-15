@@ -1,4 +1,4 @@
-// Handmade Hero OS#include <stdio.h>
+#include <stdio.h>
 #include <AppKit/AppKit.h>
 #import <IOKit/hid/IOHIDLib.h>
 #import <AudioToolbox/AudioToolbox.h>
@@ -11,16 +11,6 @@
 #include <sys/stat.h>
 
 global_variable bool Running = true;
-
-// TODO: (Ted)  Move this to the header file.
-#define MAC_MAX_FILENAME_SIZE 4096
-
-// TODO: (Ted)  Move this to the header file.
-struct mac_app_path
-{
-    char Filename[MAC_MAX_FILENAME_SIZE];
-    char *OnePastLastAppFileNameSlash;
-};
 
 // NOTE: (Ted)  Not sure how this performs when the app directory is a symbolic link
 internal void
@@ -396,9 +386,66 @@ MacSetupGameController(mac_game_controller *MacGameController)
                                     kCFRunLoopDefaultMode);
 }
 
+internal void
+MacBeginRecordingInput(mac_state *MacState)
+{
+    if (MacState->ReplayMemoryBlock)
+    {
+        MacState->RecordingHandle = MacState->ReplayFileHandle;
+        fseek(MacState->RecordingHandle, (int64)MacState->PermanentStorageSize, SEEK_SET);
+        memcpy(MacState->ReplayMemoryBlock, MacState->GameMemoryBlock, MacState->PermanentStorageSize);
+        MacState->IsRecording = true;
+    }
+}
+
+internal void
+MacEndRecordingInput(mac_state *MacState)
+{
+    MacState->IsRecording = false;
+}
+
+internal void
+MacBeginInputPlayback(mac_state *MacState)
+{
+    if (MacState->ReplayMemoryBlock)
+    {
+        MacState->PlaybackHandle = MacState->ReplayFileHandle;
+        fseek(MacState->PlaybackHandle, (int64)MacState->PermanentStorageSize, SEEK_SET);
+        memcpy(MacState->GameMemoryBlock, MacState->ReplayMemoryBlock, MacState->PermanentStorageSize);
+        MacState->IsPlayingBack = true;
+    }
+}
+
+internal void
+MacEndInputPlayback(mac_state *MacState)
+{
+    MacState->IsPlayingBack = false;
+}
+
+internal void
+MacRecordInput(mac_state *MacState, game_input *NewInput)
+{
+    size_t BytesWritten = fwrite(NewInput, sizeof(char), sizeof(*NewInput), MacState->RecordingHandle);
+    if (BytesWritten <= 0)
+    {
+        // TODO: (ted) Log Record Input Failure
+    }
+}
+
+internal void
+MacPlaybackInput(mac_state *MacState, game_input *NewInput)
+{
+    uint64 BytesRead = fread(NewInput, sizeof(char), sizeof(*NewInput), MacState->PlaybackHandle);
+    if (BytesRead <= 0)
+    {
+        MacEndInputPlayback(MacState);
+        MacBeginInputPlayback(MacState);
+    }
+}
+
 // TODO: (Ted)  Test this again.
 internal void
-MacHandleKeyboardEvent(mac_game_controller *GameController, NSEvent *Event)
+MacHandleKeyboardEvent(mac_game_controller *GameController, NSEvent *Event, mac_state *MacState)
 {
     switch (Event.type) {
         case NSEventTypeKeyDown:
@@ -441,6 +488,24 @@ MacHandleKeyboardEvent(mac_game_controller *GameController, NSEvent *Event)
             else if (Event.keyCode == RKeyCode)
             {
                 GameController->RightShoulderButtonState = true;
+            }
+            else if (Event.keyCode == LKeyCode)
+            {
+                if (MacState->IsPlayingBack)
+                {
+                    MacEndInputPlayback(MacState);
+                    break;
+                }
+
+                if (!MacState->IsRecording)
+                {
+                    MacBeginRecordingInput(MacState);
+                } else
+                {
+                    MacEndRecordingInput(MacState);
+                    MacBeginInputPlayback(MacState);
+                    break;
+                }
             }
 
             break;
@@ -733,6 +798,14 @@ int main(int argc, const char * argv[]) {
     [Window setDelegate: MainWindowDelegate];
     Window.contentView.wantsLayer = YES;
 
+    mac_state MacState = {};
+    MacState.IsRecording = false;
+    MacState.IsPlayingBack = false;
+
+    mac_app_path Path = {};
+    MacState.Path = Path;
+    MacBuildAppFilePath(&MacState.Path);
+
     game_offscreen_buffer Buffer = {};
     Buffer.BytesPerPixel = 4;
 
@@ -777,6 +850,36 @@ int main(int argc, const char * argv[]) {
                     format: @"Failed to allocate transient storage"];
     }
 
+    MacState.GameMemoryBlock = GameMemory.PermanentStorage;
+    MacState.PermanentStorageSize = GameMemory.PermanentStorageSize;
+
+    int FileDescriptor;
+    mode_t Mode = S_IRUSR | S_IWUSR;
+    char Filename[MAC_MAX_FILENAME_SIZE];
+    char LocalFilename[MAC_MAX_FILENAME_SIZE];
+    sprintf(LocalFilename, "Contents/Resources/ReplayBuffer");
+    MacBuildAppPathFilename(&MacState.Path, LocalFilename,
+                            sizeof(Filename), Filename);
+    FileDescriptor = open(Filename, O_CREAT | O_RDWR, Mode);
+    int Result = truncate(Filename, (int64)GameMemory.PermanentStorageSize);
+
+    if (Result < 0)
+    {
+        // TODO: (ted)  Log This
+    }
+
+    MacState.ReplayMemoryBlock = mmap(0, GameMemory.PermanentStorageSize,
+                                      PROT_READ | PROT_WRITE,
+                                      MAP_PRIVATE, FileDescriptor, 0);
+    MacState.ReplayFileHandle = fopen(Filename, "r+");
+
+    fseek(MacState.ReplayFileHandle, (int)MacState.PermanentStorageSize, SEEK_SET);
+    if (MacState.ReplayMemoryBlock)
+    {
+    } else {
+        // TODO: (casey)    Diagnostic
+    }
+
     mac_game_controller PlaystationController = {};
     MacSetupGameController(&PlaystationController);
 
@@ -806,13 +909,10 @@ int main(int argc, const char * argv[]) {
     real32 TargetFramesPerSecond = MonitorRefreshHz / 2.0f;
     real32 TargetSecondsPerFrame = 1.0f / TargetFramesPerSecond;
 
-    mac_app_path Path = {};
-    MacBuildAppFilePath(&Path);
-
     char *GameLibraryInBundlePath = (char *)"Contents/Resources/GameCode.dylib";
     char GameLibraryFullPath[MAC_MAX_FILENAME_SIZE];
 
-    MacBuildAppPathFilename(&Path, GameLibraryInBundlePath,
+    MacBuildAppPathFilename(&MacState.Path, GameLibraryInBundlePath,
                             sizeof(GameLibraryFullPath), GameLibraryFullPath);
 
     mac_game_code Game = {};
@@ -837,7 +937,7 @@ int main(int argc, const char * argv[]) {
                 (Event.type == NSEventTypeKeyDown ||
                  Event.type == NSEventTypeKeyUp))
             {
-                MacHandleKeyboardEvent(&KeyboardController, Event);
+                MacHandleKeyboardEvent(&KeyboardController, Event, &MacState);
             }
 
             switch ([Event type]) {
@@ -941,9 +1041,16 @@ int main(int argc, const char * argv[]) {
 
         if (Game.DLLLastWriteTime < NewGameLibraryWriteTime)
         {
-            NSLog(@"Reloading Game Code");
             MacUnloadGameCode(&Game);
             MacLoadGameCode(&Game, GameLibraryFullPath);
+        }
+
+        if (MacState.IsRecording)
+        {
+            MacRecordInput(&MacState, NewInput);
+        } else if (MacState.IsPlayingBack)
+        {
+            MacPlaybackInput(&MacState, NewInput);
         }
 
         Game.UpdateAndRender(&GameMemory, NewInput, &Buffer);
@@ -1023,8 +1130,8 @@ int main(int argc, const char * argv[]) {
         real32 MillesSecondsPerFrame = (real32)NanosecondsPerFrame * (real32)1.0E-6;
         real32 FramesPerSecond = 1 / SecondsPerFrame;
 
-//        NSLog(@"Frames Per Second: %f", (real64)FramesPerSecond);
-//        NSLog(@"MillesSecondsPerFrame: %f", (real64)MillesSecondsPerFrame);
+        NSLog(@"Frames Per Second: %f", (real64)FramesPerSecond);
+        NSLog(@"MillesSecondsPerFrame: %f", (real64)MillesSecondsPerFrame);
 
         LastCounter = mach_absolute_time();
 

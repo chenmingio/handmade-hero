@@ -1,6 +1,8 @@
 #import <AudioToolbox/AudioToolbox.h>
 #include "../game_library/handmade.h"
 
+#define MAC_MAX_FILENAME_SIZE 4096
+
 const uint16 LeftArrowKeyCode = 0x7B;
 const uint16 RightArrowKeyCode = 0x7C;
 const uint16 DownArrowKeyCode = 0x7D;
@@ -62,4 +64,32 @@ struct mac_game_code
     game_update_and_render *UpdateAndRender;
     game_get_sound_samples *GetSoundSamples;
     bool32 IsValid;
+};
+
+struct mac_app_path
+{
+    char Filename[MAC_MAX_FILENAME_SIZE];
+    char *OnePastLastAppFileNameSlash;
+};
+
+// NOTE: (Ted)  This is Mac platform-specific state
+struct mac_state
+{
+    void *GameMemoryBlock;
+    uint64 PermanentStorageSize;
+
+    FILE *ReplayFileHandle;
+    char ReplayFileName[MAC_MAX_FILENAME_SIZE];
+    void *ReplayMemoryBlock;
+
+    mac_app_path Path;
+
+    FILE *RecordingHandle;
+    bool32 IsRecording;
+
+    FILE *PlaybackHandle;
+    bool32 IsPlayingBack;
+
+    char ResourcesDirectory[MAC_MAX_FILENAME_SIZE];
+    int ResourcesDirectorySize;
 };
