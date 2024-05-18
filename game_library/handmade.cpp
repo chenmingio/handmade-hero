@@ -83,16 +83,16 @@ void GameUpdateAndRender(game_memory *Memory, game_input *input, game_offscreen_
         GameState->ToneHz = (uint32) (Input1->EndX) * 256 + 256;
     }
 
-    if (Input1->A.EndedDown) {
+    if (Input1->Right.EndedDown) {
         GameState->OffsetX += 1;
     }
-    if (Input1->B.EndedDown) {
+    if (Input1->Left.EndedDown) {
         GameState->OffsetX -= 1;
     }
-    if (Input1->X.EndedDown) {
+    if (Input1->Down.EndedDown) {
         GameState->OffsetY += 1;
     }
-    if (Input1->Y.EndedDown) {
+    if (Input1->Up.EndedDown) {
         GameState->OffsetY -= 1;
     }
 

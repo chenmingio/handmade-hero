@@ -4,7 +4,7 @@
 #define Megabytes(Value) (Kilobytes(Value) * 1024LL)
 #define Gigabytes(Value) (Megabytes(Value) * 1024LL)
 
-extern "C" {
+//extern "C" {
 #if HANDMADE_INTERNAL
 struct debug_read_file_result {
     void *Contents;
@@ -108,4 +108,4 @@ typedef GAME_GET_SOUND_SAMPLES(game_get_sound_samples);
 
 #define GAME_UPDATE_AND_RENDER(name) void name(game_memory *Memory, game_input *Input, game_offscreen_buffer *Buffer)
 typedef GAME_UPDATE_AND_RENDER(game_update_and_render);
-}
+//}
