@@ -19,12 +19,15 @@ COMPILER_WARNING_FLAGS="-Werror
 
 DISABLED_WARNINGS="-Wno-old-style-cast
                    -Wno-cast-qual
+                   -Wno-cast-align
                    -Wno-gnu-anonymous-struct
                    -Wno-nested-anon-types
                    -Wno-padded
                    -Wno-unused-variable
-                   -Wno-pedantic
+                   -Wno-unused-but-set-variable
                    -Wno-unused-parameter
+                   -Wno-unused-function
+                   -Wno-pedantic
                    -Wno-missing-prototypes
                    -Wno-nullable-to-nonnull-conversion
                    -Wno-c++11-long-long

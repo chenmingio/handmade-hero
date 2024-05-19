@@ -78,9 +78,11 @@ struct game_controller_input {
 
 struct game_input {
     game_controller_input Controllers[2];
+    real32 TargetSecondsPerFrame;
 };
 
 
+// transient storage is behind permanent storage
 struct game_memory {
     uint64 PermanentStorageSize;
     void *PermanentStorage;

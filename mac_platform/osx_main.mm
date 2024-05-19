@@ -386,6 +386,7 @@ MacSetupGameController(mac_game_controller *MacGameController)
                                     kCFRunLoopDefaultMode);
 }
 
+//
 internal void
 MacBeginRecordingInput(mac_state *MacState)
 {
@@ -777,8 +778,8 @@ int main(int argc, const char * argv[]) {
 
     NSRect ScreenRect = [[NSScreen mainScreen] frame];
 
-    real32 GlobalRenderWidth = 1024;
-    real32 GlobalRenderHeight = 768;
+    real32 GlobalRenderWidth = 1920/2;
+    real32 GlobalRenderHeight = 1080/2;
 
     NSRect InitialFrame = NSMakeRect((ScreenRect.size.width - (real64)GlobalRenderWidth) * 0.5,
                                      (ScreenRect.size.height - (real64)GlobalRenderHeight) * 0.5,
@@ -861,6 +862,7 @@ int main(int argc, const char * argv[]) {
     MacBuildAppPathFilename(&MacState.Path, LocalFilename,
                             sizeof(Filename), Filename);
     FileDescriptor = open(Filename, O_CREAT | O_RDWR, Mode);
+    // truncate change file size to MemoryStorySize
     int Result = truncate(Filename, (int64)GameMemory.PermanentStorageSize);
 
     if (Result < 0)
@@ -880,6 +882,7 @@ int main(int argc, const char * argv[]) {
         // TODO: (casey)    Diagnostic
     }
 
+    // input handling
     mac_game_controller PlaystationController = {};
     MacSetupGameController(&PlaystationController);
 
@@ -950,6 +953,8 @@ int main(int argc, const char * argv[]) {
         NewInput = OldInput;
         OldInput = Temp;
 
+        NewInput->TargetSecondsPerFrame = TargetSecondsPerFrame;
+
         for (int MacControllerIndex = 0;
              MacControllerIndex < 2;
              MacControllerIndex++)
@@ -959,7 +964,7 @@ int main(int argc, const char * argv[]) {
             game_controller_input *OldController = &OldInput->Controllers[MacControllerIndex];
             game_controller_input *NewController = &NewInput->Controllers[MacControllerIndex];
 
-            // NOTE: (Ted)   Update Game Controler Inputs
+            //
             MacProcessGameControllerButton(&(OldController->A),
                                            &(NewController->A),
                                            MacController->CircleButtonState);
@@ -984,10 +989,10 @@ int main(int argc, const char * argv[]) {
                                            &(NewController->RightShoulder),
                                            MacController->RightShoulderButtonState);
 
-            bool32 Right = MacController->DPadX > 0 ? true:false;
-            bool32 Left = MacController->DPadX < 0 ? true:false;
-            bool32 Up = MacController->DPadY > 0 ? true:false;
-            bool32 Down = MacController->DPadY < 0 ? true:false;
+            bool32 Right = MacController->DPadX > 0;
+            bool32 Left = MacController->DPadX < 0;
+            bool32 Up = MacController->DPadY > 0;
+            bool32 Down = MacController->DPadY < 0;
 
             MacProcessGameControllerButton(&(OldController->Right),
                                            &(NewController->Right),
@@ -1002,8 +1007,8 @@ int main(int argc, const char * argv[]) {
                                            &(NewController->Down),
                                            Down);
 
-            // TODO: (Ted)  Figure out if controller really is analog.
-            NewController->IsAnalog = true;
+            NewController->IsAnalog = OldController->IsAnalog;
+            // TODO: if using stick, set IsAnalog to true
 
             NewController->StartX = OldController->EndX;
             NewController->StartY = OldController->EndY;
@@ -1037,6 +1042,7 @@ int main(int argc, const char * argv[]) {
         SoundBuffer.Samples = Samples;
         SoundBuffer.SampleCount = (BytesToWrite/SoundOutput.BytesPerSample);
 
+        // auto reload game library
         time_t NewGameLibraryWriteTime = MacGetLastWriteTime(GameLibraryFullPath);
 
         if (Game.DLLLastWriteTime < NewGameLibraryWriteTime)
@@ -1045,6 +1051,7 @@ int main(int argc, const char * argv[]) {
             MacLoadGameCode(&Game, GameLibraryFullPath);
         }
 
+        // playback
         if (MacState.IsRecording)
         {
             MacRecordInput(&MacState, NewInput);

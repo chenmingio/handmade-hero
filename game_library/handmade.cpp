@@ -11,8 +11,12 @@ void GameUpdateSound(game_sound_output_buffer *SoundBuffer, uint32 ToneHz) {
     int16 *SampleOut = SoundBuffer->Samples;
 
     for (uint32 SampleIndex = 0; SampleIndex < SoundBuffer->SampleCount; ++SampleIndex) {
+#if 0
         real32 SineValue = sinf(tSine);
         int16 SampleValue = (int16) (SineValue * ToneVolume);
+#else
+        int16 SampleValue = 0;
+#endif
         *SampleOut++ = SampleValue;
         *SampleOut++ = SampleValue;
         tSine += 2.0f * (real32) M_PI / (real32) WavePeriod;
@@ -45,6 +49,54 @@ void RenderWeirdGradient(game_offscreen_buffer *Buffer, int OffsetX, int OffsetY
             //Alpha
             *Pixel = 255;
             ++Pixel;
+        }
+
+        Row += Buffer->Pitch;
+    }
+}
+
+internal uint32
+RoundReal32ToInt32(real32 Real32) {
+    uint32 Result = (uint32) (Real32 + 0.5f);
+    // TODO(casey): Intrinsic????
+    return (Result);
+}
+
+internal void
+DrawRectangle(game_offscreen_buffer *Buffer,
+              real32 RealMinX, real32 RealMinY, real32 RealMaxX, real32 RealMaxY,
+              uint32 Color) {
+    // TODO(casey): Floating point color tomorrow!!!!!!
+
+   uint32 MinX = RoundReal32ToInt32(RealMinX);
+   uint32 MinY = RoundReal32ToInt32(RealMinY);
+   uint32 MaxX = RoundReal32ToInt32(RealMaxX);
+   uint32 MaxY = RoundReal32ToInt32(RealMaxY);
+
+//    if (MinX < 0) {
+//        MinX = 0;
+//    }
+//
+//    if (MinY < 0) {
+//        MinY = 0;
+//    }
+
+    if (MaxX > Buffer->Width) {
+        MaxX = Buffer->Width;
+    }
+
+    if (MaxY > Buffer->Height) {
+        MaxY = Buffer->Height;
+    }
+
+
+    uint8 *Row = ((uint8 *) Buffer->Memory +
+                  MinX * Buffer->BytesPerPixel +
+                  MinY * Buffer->Pitch);
+    for (uint32 Y = MinY; Y < MaxY; ++Y) {
+        uint32 *Pixel = (uint32 *) Row;
+        for (uint32 X = MinX; X < MaxX; ++X) {
+            *Pixel++ = Color;
         }
 
         Row += Buffer->Pitch;
@@ -96,7 +148,8 @@ void GameUpdateAndRender(game_memory *Memory, game_input *input, game_offscreen_
         GameState->OffsetY -= 1;
     }
 
-    RenderWeirdGradient(Buffer, GameState->OffsetX, GameState->OffsetY);
+//    RenderWeirdGradient(Buffer, GameState->OffsetX, GameState->OffsetY);
+    DrawRectangle(Buffer, 0.0f, 0.0f, 111.0f, 111.0f, 0xFF00FF00);
 }
 }
 
