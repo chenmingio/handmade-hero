@@ -56,7 +56,7 @@ void RenderWeirdGradient(game_offscreen_buffer *Buffer, int OffsetX, int OffsetY
 }
 
 internal uint32
-RoundReal32ToInt32(real32 Real32) {
+RoundReal32ToUInt32(real32 Real32) {
     uint32 Result = (uint32) (Real32 + 0.5f);
     // TODO(casey): Intrinsic????
     return (Result);
@@ -65,13 +65,19 @@ RoundReal32ToInt32(real32 Real32) {
 internal void
 DrawRectangle(game_offscreen_buffer *Buffer,
               real32 RealMinX, real32 RealMinY, real32 RealMaxX, real32 RealMaxY,
-              uint32 Color) {
-    // TODO(casey): Floating point color tomorrow!!!!!!
+              real32 R, real32 G, real32 B) {
 
-   uint32 MinX = RoundReal32ToInt32(RealMinX);
-   uint32 MinY = RoundReal32ToInt32(RealMinY);
-   uint32 MaxX = RoundReal32ToInt32(RealMaxX);
-   uint32 MaxY = RoundReal32ToInt32(RealMaxY);
+    // 0x123456RR
+    uint32 Color = ((RoundReal32ToUInt32(R * 255.0f) << 16) |
+                    (RoundReal32ToUInt32(G * 255.0f) << 8) |
+                    (RoundReal32ToUInt32(B * 255.0f) << 0));
+
+    Color = Color << 8 | 0x9F;
+
+    uint32 MinX = RoundReal32ToUInt32(RealMinX);
+    uint32 MinY = RoundReal32ToUInt32(RealMinY);
+    uint32 MaxX = RoundReal32ToUInt32(RealMaxX);
+    uint32 MaxY = RoundReal32ToUInt32(RealMaxY);
 
 //    if (MinX < 0) {
 //        MinX = 0;
@@ -148,8 +154,8 @@ void GameUpdateAndRender(game_memory *Memory, game_input *input, game_offscreen_
         GameState->OffsetY -= 1;
     }
 
-//    RenderWeirdGradient(Buffer, GameState->OffsetX, GameState->OffsetY);
-    DrawRectangle(Buffer, 0.0f, 0.0f, 111.0f, 111.0f, 0xFF00FF00);
+    DrawRectangle(Buffer, 0.0f, 0.0f, (real32) Buffer->Width, (real32) Buffer->Height, 1.0f, 0.0f, 0.1f);
+    DrawRectangle(Buffer, 10.0f, 10.0f, 40.0f, 40.0f, 1.0f, 1.0f, 0.0f);
 }
 }
 
