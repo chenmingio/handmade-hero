@@ -10,6 +10,7 @@ struct debug_read_file_result {
     uint32 ContentsSize;
 };
 
+#define ArrayCount(Array) (sizeof(Array) / sizeof((Array)[0]))
 
 #define DEBUG_PLATFORM_READ_ENTIRE_FILE(name) debug_read_file_result name(char *Filename)
 typedef DEBUG_PLATFORM_READ_ENTIRE_FILE(debug_platform_read_entire_file);
@@ -25,10 +26,10 @@ typedef DEBUG_PLATFORM_WRITE_ENTIRE_FILE(debug_platform_write_entire_file);
 
 struct game_offscreen_buffer {
     uint8 *Memory;
-    uint32 Height;
-    uint32 Width;
-    uint32 BytesPerPixel;
-    uint32 Pitch;
+    int32 Height;
+    int32 Width;
+    int32 BytesPerPixel;
+    int32 Pitch;
 };
 
 struct game_sound_output_buffer {
@@ -102,23 +103,57 @@ struct game_state {
     real32 PlayerX;
     real32 PlayerY;
 
+    int32 PlayerTileMapX;
+    int32 PlayerTileMapY;
+
     uint32 ToneHz;
 };
 
 struct tile_map {
     uint32 *Tiles;
 
-    uint32 CountX;
-    uint32 CountY;
+};
 
-    real32 Width;
-    real32 Height;
+struct world {
+    // how many tiles inside one map
+    int32 CountX;
+    int32 CountY;
+
+    real32 TileWidth;
+    real32 TileHeight;
     real32 UpperLeftX;
     real32 UpperLeftY;
+
+    // how many maps in the world
+    int32 TileMapCountX;
+    int32 TileMapCountY;
+
+    tile_map *TileMaps;
+};
+
+struct raw_position {
+    int32 TileMapX;
+    int32 TileMapY;
+
+    real32 X;
+    real32 Y;
+};
+
+struct canonical_position {
+    int32 TileMapX;
+    int32 TileMapY;
+
+    int32 TileX;
+    int32 TileY;
+
+    real32 TileRelX;
+    real32 TileRelY;
 };
 
 #define GAME_GET_SOUND_SAMPLES(name) void name(game_memory *Memory, game_sound_output_buffer *SoundBuffer)
+
 typedef GAME_GET_SOUND_SAMPLES(game_get_sound_samples);
 
 #define GAME_UPDATE_AND_RENDER(name) void name(game_memory *Memory, game_input *Input, game_offscreen_buffer *Buffer)
+
 typedef GAME_UPDATE_AND_RENDER(game_update_and_render);

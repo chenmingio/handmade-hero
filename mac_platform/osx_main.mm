@@ -191,10 +191,10 @@ void MacRefreshBuffer(game_offscreen_buffer *Buffer, NSWindow *Window) {
         free(Buffer->Memory);
     }
 
-    Buffer->Width = (uint32)Window.contentView.bounds.size.width;
-    Buffer->Height = (uint32)Window.contentView.bounds.size.height;
+    Buffer->Width = (int32)Window.contentView.bounds.size.width;
+    Buffer->Height = (int32)Window.contentView.bounds.size.height;
     Buffer->Pitch = Buffer->Width * Buffer->BytesPerPixel;
-    Buffer->Memory = (uint8 *)malloc(Buffer->Pitch * Buffer->Height);
+    Buffer->Memory = (uint8 *)malloc((size_t)(Buffer->Pitch * Buffer->Height));
 }
 
 
@@ -1139,8 +1139,8 @@ int main(int argc, const char * argv[]) {
         real32 MillesSecondsPerFrame = (real32)NanosecondsPerFrame * (real32)1.0E-6;
         real32 FramesPerSecond = 1 / SecondsPerFrame;
 
-        NSLog(@"Frames Per Second: %f", (real64)FramesPerSecond);
-        NSLog(@"MillesSecondsPerFrame: %f", (real64)MillesSecondsPerFrame);
+//        NSLog(@"Frames Per Second: %f", (real64)FramesPerSecond);
+//        NSLog(@"MillesSecondsPerFrame: %f", (real64)MillesSecondsPerFrame);
 
         LastCounter = mach_absolute_time();
 
