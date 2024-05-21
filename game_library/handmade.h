@@ -78,7 +78,7 @@ struct game_controller_input {
 
 struct game_input {
     game_controller_input Controllers[2];
-    real32 TargetSecondsPerFrame;
+    real32 dtForFrame;
 };
 
 
@@ -100,8 +100,9 @@ struct game_memory {
 };
 
 struct game_state {
-    int OffsetX;
-    int OffsetY;
+    real32 PlayerX;
+    real32 PlayerY;
+
     uint32 ToneHz;
 };
 

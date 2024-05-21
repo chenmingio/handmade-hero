@@ -460,11 +460,11 @@ MacHandleKeyboardEvent(mac_game_controller *GameController, NSEvent *Event, mac_
             }
             else if (Event.keyCode == LeftArrowKeyCode)
             {
-                GameController->DPadX = 1;
+                GameController->DPadX = -1;
             }
             else if (Event.keyCode == RightArrowKeyCode)
             {
-                GameController->DPadX = -1;
+                GameController->DPadX = 1;
             }
             else if (Event.keyCode == AKeyCode)
             {
@@ -953,7 +953,7 @@ int main(int argc, const char * argv[]) {
         NewInput = OldInput;
         OldInput = Temp;
 
-        NewInput->TargetSecondsPerFrame = TargetSecondsPerFrame;
+        NewInput->dtForFrame = TargetSecondsPerFrame;
 
         for (int MacControllerIndex = 0;
              MacControllerIndex < 2;
@@ -1059,6 +1059,8 @@ int main(int argc, const char * argv[]) {
         {
             MacPlaybackInput(&MacState, NewInput);
         }
+
+        NewInput->dtForFrame = TargetSecondsPerFrame;
 
         Game.UpdateAndRender(&GameMemory, NewInput, &Buffer);
         Game.GetSoundSamples(&GameMemory, &SoundBuffer);
