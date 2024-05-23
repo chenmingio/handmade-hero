@@ -5,7 +5,18 @@
 #include "assert.h"
 
 internal
-void GameUpdateSound(game_sound_output_buffer *SoundBuffer, uint32 ToneHz) {
+void GameUpdateSound(game_state * GameState, game_sound_output_buffer *SoundBuffer, uint32 ToneHz) {
+    int16 ToneVolume = 3000;
+    uint32 WavePeriod = SoundBuffer->SamplesPerSecond / ToneHz;
+
+    int16 *SampleOut = SoundBuffer->Samples;
+    for (uint32 SampleIndex = 0;
+         SampleIndex < SoundBuffer->SampleCount;
+         ++SampleIndex) {
+        // TODO(casey): Draw this out for people
+        int16 SampleValue = 0;
+        *SampleOut++ = SampleValue;
+        *SampleOut++ = SampleValue;
 //    local_persist real32 tSine = 0.0f;
 //    uint32 WavePeriod = SoundBuffer->SamplesPerSecond / ToneHz;
 //
@@ -23,7 +34,7 @@ void GameUpdateSound(game_sound_output_buffer *SoundBuffer, uint32 ToneHz) {
 //        *SampleOut++ = SampleValue;
 //        *SampleOut++ = SampleValue;
 //        tSine += 2.0f * (real32) M_PI / (real32) WavePeriod;
-//    }
+    }
 }
 
 inline uint32
@@ -147,39 +158,35 @@ canonical_position GetCanonicalPosition(world *World, raw_position Pos) {
     Result.TileX = FloorReal32ToInt32(X / World->TileWidth);
     Result.TileY = FloorReal32ToInt32(Y / World->TileHeight);
 
-    Result.TileRelX = X - Result.TileX*World->TileWidth;
-    Result.TileRelY = Y - Result.TileY*World->TileHeight;
+    Result.TileRelX = X - Result.TileX * World->TileWidth;
+    Result.TileRelY = Y - Result.TileY * World->TileHeight;
 
     assert(Result.TileRelX >= 0);
     assert(Result.TileRelY >= 0);
     assert(Result.TileRelX < World->TileWidth);
     assert(Result.TileRelY < World->TileHeight);
 
-    if(Result.TileX < 0)
-    {
+    if (Result.TileX < 0) {
         Result.TileX = World->CountX + Result.TileX;
         --Result.TileMapX;
     }
 
-    if(Result.TileY < 0)
-    {
+    if (Result.TileY < 0) {
         Result.TileY = World->CountY + Result.TileY;
         --Result.TileMapY;
     }
 
-    if(Result.TileX >= World->CountX)
-    {
+    if (Result.TileX >= World->CountX) {
         Result.TileX = Result.TileX - World->CountX;
         ++Result.TileMapX;
     }
 
-    if(Result.TileY >= World->CountY)
-    {
+    if (Result.TileY >= World->CountY) {
         Result.TileY = Result.TileY - World->CountY;
         ++Result.TileMapY;
     }
 
-    return(Result);
+    return (Result);
 }
 
 internal
@@ -193,7 +200,7 @@ bool32 IsWorldPointEmpty(world *World, raw_position TestPos) {
 extern "C" {
 void GameGetSoundSamples(game_memory *Memory, game_sound_output_buffer *SoundBuffer) {
     game_state *GameState = (game_state *) Memory->PermanentStorage;
-    GameUpdateSound(SoundBuffer, GameState->ToneHz);
+    GameUpdateSound(GameState, SoundBuffer, GameState->ToneHz);
 }
 
 void GameUpdateAndRender(game_memory *Memory, game_input *input, game_offscreen_buffer *Buffer) {
