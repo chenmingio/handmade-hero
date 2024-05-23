@@ -17,23 +17,6 @@ void GameUpdateSound(game_state * GameState, game_sound_output_buffer *SoundBuff
         int16 SampleValue = 0;
         *SampleOut++ = SampleValue;
         *SampleOut++ = SampleValue;
-//    local_persist real32 tSine = 0.0f;
-//    uint32 WavePeriod = SoundBuffer->SamplesPerSecond / ToneHz;
-//
-//    real32 ToneVolume = 3000;
-//
-//    int16 *SampleOut = SoundBuffer->Samples;
-//
-//    for (uint32 SampleIndex = 0; SampleIndex < SoundBuffer->SampleCount; ++SampleIndex) {
-//#if 0
-//        real32 SineValue = sinf(tSine);
-//        int16 SampleValue = (int16) (SineValue * ToneVolume);
-//#else
-//        int16 SampleValue = 0;
-//#endif
-//        *SampleOut++ = SampleValue;
-//        *SampleOut++ = SampleValue;
-//        tSine += 2.0f * (real32) M_PI / (real32) WavePeriod;
     }
 }
 
