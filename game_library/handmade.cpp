@@ -15,8 +15,8 @@ void GameUpdateSound(game_state *GameState, game_sound_output_buffer *SoundBuffe
          ++SampleIndex) {
         // TODO(casey): Draw this out for people
         int16 SampleValue = 0;
-        *SampleOut++ = SampleValue;
-        *SampleOut++ = SampleValue;
+        // *SampleOut++ = SampleValue;
+        // *SampleOut++ = SampleValue;
     }
 }
 
@@ -128,10 +128,7 @@ void RecanonicalizeCoord(world *World, int32 TileCount, int32 *TileMap, int32 *T
 
 internal
 canonical_position RecanonicalizePosition(world *World, canonical_position Pos) {
-    canonical_position Result;
-
-    Result.TileMapX = Pos.TileMapX;
-    Result.TileMapY = Pos.TileMapY;
+    canonical_position Result = Pos;
 
     RecanonicalizeCoord(World, World->CountX, &Result.TileMapX, &Result.TileX, &Pos.TileRelX);
     RecanonicalizeCoord(World, World->CountY, &Result.TileMapY, &Result.TileY, &Pos.TileRelY);
@@ -157,7 +154,7 @@ void printPlayerPosition(canonical_position PlayerP) {
 extern "C" {
 void GameGetSoundSamples(game_memory *Memory, game_sound_output_buffer *SoundBuffer) {
     game_state *GameState = (game_state *) Memory->PermanentStorage;
-    GameUpdateSound(GameState, SoundBuffer, GameState->ToneHz);
+    GameUpdateSound(GameState, SoundBuffer, 440);
 }
 
 void GameUpdateAndRender(game_memory *Memory, game_input *input, game_offscreen_buffer *Buffer) {
