@@ -99,16 +99,6 @@ struct game_memory {
 #endif
 };
 
-struct game_state {
-    real32 PlayerX;
-    real32 PlayerY;
-
-    int32 PlayerTileMapX;
-    int32 PlayerTileMapY;
-
-    uint32 ToneHz;
-};
-
 struct tile_map {
     uint32 *Tiles;
 
@@ -117,6 +107,7 @@ struct tile_map {
 struct world {
     real32 TileSideInMeters;
     int32 TileSideInPixels;
+    real32 MetersToPixels;
 
     // how many tiles inside one map
     int32 CountX;
@@ -132,14 +123,6 @@ struct world {
     tile_map *TileMaps;
 };
 
-struct raw_position {
-    int32 TileMapX;
-    int32 TileMapY;
-
-    real32 X;
-    real32 Y;
-};
-
 struct canonical_position {
     int32 TileMapX;
     int32 TileMapY;
@@ -150,6 +133,12 @@ struct canonical_position {
     real32 TileRelX;
     real32 TileRelY;
 };
+
+struct game_state {
+    canonical_position PlayerP;
+    uint32 ToneHz;
+};
+
 
 #define GAME_GET_SOUND_SAMPLES(name) void name(game_memory *Memory, game_sound_output_buffer *SoundBuffer)
 

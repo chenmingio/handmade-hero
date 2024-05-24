@@ -1,3 +1,6 @@
 .idea
 
 *.xcbkptlist
+*.xcuserstate
+
+.DS_Store
